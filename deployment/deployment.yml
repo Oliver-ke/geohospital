@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deployment-jjahe
+  labels:
+    app: geohospital
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: geohospital
+  template:
+    metadata:
+      labels:
+        app: geohospital
+    spec:
+      nodeSelector:
+        kubernetes.io/os: linux
+        workflow: mee
+      containers:
+      - name: backend
+        image: 681986958382.dkr.ecr.us-east-1.amazonaws.com/geohospital
+        ports:
+        - containerPort: 5000

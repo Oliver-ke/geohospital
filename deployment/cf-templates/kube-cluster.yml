@@ -1,0 +1,30 @@
+Parameters:
+  CusterName:
+    Description: Name of the custer
+    Type: String
+    Default: geohospital
+
+Resources:
+  EKSCluster:
+      Type: AWS::EKS::Cluster
+      Properties:
+        Name: !Sub "${CusterName}"
+        Version: "1.21"
+        RoleArn: "arn:aws:iam::681986958382:role/myEKSClusterRole"
+        ResourcesVpcConfig:
+          SecurityGroupIds:
+            - sg-06f95283a261b28ef
+          SubnetIds:
+            - subnet-0c6f0c0c5c939b1bc
+            - subnet-05aa97b72c3868ed6
+            - subnet-0fd1f621e560e87ab
+            - subnet-0a85f9cdfbddbdeed
+          EndpointPublicAccess: true
+        Logging:
+          ClusterLogging:
+            EnabledTypes:
+              - Type: api
+              - Type: audit
+        Tags:
+          - Key: "project"
+            Value: "geohospital"

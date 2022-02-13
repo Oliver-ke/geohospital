@@ -13,6 +13,7 @@ const Map: FC = (): ReactElement => {
   const { lat, lng, name } = state;
   const [center, setCenter] = useState({ lng, lat });
   const [zoom, setZoom] = useState(13);
+
   useEffect(() => {
     if (lat && lng) {
       setZoom(15);
@@ -21,6 +22,7 @@ const Map: FC = (): ReactElement => {
       }
       return setCenter({ lat, lng });
     }
+    // eslint-disable-next-line
   }, [lat, lng]);
 
   return (

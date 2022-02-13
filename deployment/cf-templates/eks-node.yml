@@ -1,0 +1,22 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+metadata:
+  name: geohospital
+  region: us-east-1
+vpc:
+  id: "vpc-01e96501d20172413"
+  securityGroup: "sg-06f95283a261b28ef" # this is the ControlPlaneSecurityGroup
+  subnets:
+    private:
+    public:
+      public1:
+        id: "subnet-0c6f0c0c5c939b1bc"
+      public2:
+        id: "subnet-05aa97b72c3868ed6"
+managedNodeGroups:
+  - name: node-8873
+    labels: {role: workers, workflow: mee}
+    instanceType: t2.medium
+    desiredCapacity: 1
+    volumeSize: 80
+    privateNetworking: false

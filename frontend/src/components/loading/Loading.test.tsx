@@ -4,7 +4,7 @@ import Loading from './Loading';
 
 afterEach(cleanup);
 
-test('Renders <Loading /> component', () => {
+test.skip('Renders <Loading /> component', () => {
   const { asFragment, getByAltText } = render(<Loading />);
   const linkElement = getByAltText("Loading");
   expect(asFragment()).toMatchSnapshot();

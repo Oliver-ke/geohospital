@@ -12,16 +12,17 @@ export const useDebounce = (defaultValue: string, delay = 500, options = default
   const [debouncing, setDebouncing] = useState(false)
   const [signal, setSignal] = useState(Date.now())
 
-  const setValue = useCallback(value => {
-    setValueImmediately(value)
-    setDebouncing(true)
-    triggerUpdate()
-  }, [])
-
   const triggerUpdate = useCallback(debounce(() => {
     setDebouncing(false)
     setSignal(Date.now())
   }, delay, options), [])
+
+  const setValue = useCallback(value => {
+    setValueImmediately(value)
+    setDebouncing(true)
+    triggerUpdate()
+    // eslint-disable-next-line
+  }, [])
 
   const state: stateType = { signal, debouncing }
   return [value, setValue, state]

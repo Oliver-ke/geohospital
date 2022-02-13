@@ -1,0 +1,41 @@
+[Build Command]
+ docker build . -t geohospital:latest -f deployment/Dockerfile
+
+ Screenshots
+ [linting]
+ - failed Screenshots
+ - success Screenshots
+
+[Deployment]
+- Circleci pipeline showing deployment
+- AWS console showing application instances
+
+
+[kubectl context]
+kubectl config get-context
+
+add aws to kubectl context
+aws eks update-kubeconfig \
+  --region us-east-1 \
+  --name geohospital
+
+
+Kube deployment
+aws cloudformation deploy \
+    --template-file kube-node.yml \
+    --stack-name geo-cluster \
+    --parameter-overrides ClusterName="geohospital"
+
+
+default
+sg-06f95283a261b28ef
+
+values to specify to the newly created node
+--node-labels
+--name
+
+changes the lable of the nodegroup
+yq -i '.managedNodeGroups[0].labels.app = "mee"' eks-node.yml
+
+changes the name
+yq -i '.managedNodeGroups[0].name = "node-8873"' eks-node.yml

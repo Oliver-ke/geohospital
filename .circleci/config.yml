@@ -1,0 +1,142 @@
+version: '2.1'
+orbs:
+  aws-ecr: circleci/aws-ecr@7.0.0
+  aws-eks: circleci/aws-eks@2.1.1
+  kubernetes: circleci/kubernetes@1.3
+
+commands:
+  install-yd:
+    description: "add yd to current job"
+    steps:
+      - run:
+          name: "get package"
+          command: |
+            sudo wget https://github.com/mikefarah/yq/releases/download/v4.19.1/yq_linux_amd64 -O /usr/bin/yq &&\
+            sudo chmod +x /usr/bin/yq
+
+jobs:
+  build-frontend:
+    docker:
+      - image: cimg/node:14.17.3
+    steps:
+      - checkout
+      - restore_cache:
+          keys: [frontend-build]
+      - run:
+          name: Build front-end
+          command: |
+            cd frontend
+            npm install
+            npm run build
+      - save_cache:
+          paths: [frontend/node_modules]
+          key: frontend-build
+
+  build-backend:
+    docker:
+      - image: cimg/node:14.17.3
+    steps:
+      - checkout
+      - restore_cache:
+          keys: [backend-build]
+      - run:
+          name: Back-end build
+          command: |
+             cd backend
+             npm install
+      - save_cache:
+          paths: [backend/node_modules]
+          key: backend-build
+  
+  ## lint backend
+  
+  test-frontend:
+    docker:
+      - image: cimg/node:14.17.3
+    steps:
+      - checkout
+      - restore_cache:
+          keys: [frontend-build]
+      - run:
+          name: Frontend Test
+          command: |
+            cd frontend
+            npm install
+            npm run test
+
+  scan-backend:
+    docker:
+      - image: cimg/node:14.17.3
+    steps:
+      - checkout
+      - restore_cache:
+          keys: [backend-build]
+      - run:
+          name: Analyse code
+          command: |
+            cd backend
+            npm install
+            npm audit fix --audit-level=critical --force
+            npm audit --audit-level=critical
+
+  ## create node using eksctl set lable
+  create-nodegroup:
+    docker:
+      - image: weaveworks/eksctl
+    steps:
+      - checkout
+      - install-yd
+      - run:
+          name: "update config with variables"
+          command: |
+            yq -i '.managedNodeGroups[0].labels.workflow = "${CIRCLE_WORKFLOW_ID:0:7}"' \
+            deployment/cf-templates/eks-node.yml && \
+            yq -i '.managedNodeGroups[0].name = "node-${CIRCLE_WORKFLOW_ID:0:7}"' \
+            deployment/cf-templates/eks-node.yml
+      - run:
+          name: "create nodegroup with eskctl"
+          command: |
+            eskctl create nodegroup -f deployment/cf-templates/eks-node.yml
+        
+      
+  ## update deployment.yml with node-selector
+
+  deploy-to-cluster:
+    docker:
+      - image: 'cimg/python:3.10'
+    parameters:
+      cluster-name:
+        description: |
+          Name of the EKS cluster name
+        type: string
+    steps:
+      - kubernetes/install
+      - aws-eks/update-kubeconfig-with-authenticator:
+          cluster-name: << parameters.cluster-name >>
+      - run:
+          name: Test cluster
+          command: |
+            kubectl get services
+          
+workflows:
+  default:
+    jobs:
+      - build-frontend
+      - build-backend
+      - test-frontend:
+          requires: [build-frontend]
+      - scan-backend:
+          requires: [build-backend]
+      - create-nodegroup
+      - aws-ecr/build-and-push-image:
+          account-url: AWS_ECR_ACCOUNT_URL
+          aws-access-key-id: AWS_ACCESS_KEY_ID
+          aws-secret-access-key: AWS_SECRET_ACCESS_KEY
+          create-repo: true
+          no-output-timeout: 20m
+          region: AWS_REGION
+          repo: geohospital
+          skip-when-tags-exist: false
+          tag:  geohospital-${CIRCLE_WORKFLOW_ID:0:7}
+          requires:
+            - build-backend

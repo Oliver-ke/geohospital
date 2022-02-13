@@ -16,6 +16,7 @@ const SearchInput: FC<searchInpute> = ({ updateSearchQuery, inputVal: parentInpu
 
   useEffect(() => {
     updateSearchQuery(inputText);
+     // eslint-disable-next-line
   }, [inputText])
   return (
     <div className="search-input-wrapper">

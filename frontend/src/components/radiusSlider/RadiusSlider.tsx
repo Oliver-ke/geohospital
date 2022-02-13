@@ -16,7 +16,9 @@ const RadiusSlider: FC<Islider> = ({ updateSlider }): ReactElement => {
   // on mount update innitial slider value
   useEffect(() => {
     updateSlider(sliderValue * 1000)
+    // eslint-disable-next-line
   }, []);
+
   const marks: any = {
     5: '5km',
     50: {

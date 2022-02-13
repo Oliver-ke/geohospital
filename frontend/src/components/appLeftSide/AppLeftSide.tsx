@@ -54,6 +54,7 @@ const AppLeftSide: FC = (): ReactElement => {
         console.log(error);
       }
     })()
+    // eslint-disable-next-line
   }, [signal])
 
   const onPriveQueryClick = async (query: string, results: object[]) => {
