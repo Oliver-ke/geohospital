@@ -135,7 +135,7 @@ jobs:
       - kubernetes/create-or-update-resource:
           get-rollout-status: true
           resource-file-path: ./deployment/deployment.yml
-          resource-name: ${NAME}
+          resource-name: deployment-${CIRCLE_WORKFLOW_ID:0:7}
       - run:
           name: Test cluster
           command: |
@@ -160,7 +160,7 @@ workflows:
           region: AWS_DEFAULT_REGION
           repo: geohospital
           skip-when-tags-exist: false
-          tag:  geohospital-${CIRCLE_WORKFLOW_ID:0:7}
+          tag:  ${CIRCLE_WORKFLOW_ID:0:7}
           requires:
             - build-backend
       - deploy-to-cluster:
