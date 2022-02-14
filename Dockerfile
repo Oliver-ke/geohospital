@@ -10,7 +10,7 @@ RUN npm install
 
 USER node
 
-COPY --chown=node:node ../backend .
+COPY --chown=node:node backend/ .
 
 EXPOSE 5000
 
