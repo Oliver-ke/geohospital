@@ -41,3 +41,15 @@ changes the name
 yq -i '.managedNodeGroups[0].name = "node-8873"' eks-node.yml
 
 681986958382.dkr.ecr.us-east-1.amazonaws.com/geohospital
+
+circleci local execute --job JOB_NAME
+
+      - kubernetes/create-or-update-resource:
+          get-rollout-status: true
+          resource-file-path: tests/nginx-deployment/deployment.yaml
+          resource-name: deployment/nginx-deployment
+
+                - run:
+          name: create deployment
+          command: |
+            kubectl apply -f ./deployment/deployment.yml 
