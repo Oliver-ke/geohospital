@@ -9,7 +9,7 @@ commands:
     description: "add yd to current job"
     steps:
       - run:
-          name: "get package"
+          name: "get package yd"
           command: |
             sudo wget https://github.com/mikefarah/yq/releases/download/v4.19.1/yq_linux_amd64 -O /usr/bin/yq &&\
             sudo chmod +x /usr/bin/yq
@@ -96,10 +96,13 @@ jobs:
       - run:
           name: "update config with variables"
           command: |
-            yq -i '.managedNodeGroups[0].labels.workflow = "${CIRCLE_WORKFLOW_ID:0:7}"' \
-            deployment/cf-templates/eks-node.yml && \
-            yq -i '.managedNodeGroups[0].name = "node-${CIRCLE_WORKFLOW_ID:0:7}"' \
-            deployment/cf-templates/eks-node.yml
+            NAME=node-${CIRCLE_WORKFLOW_ID:0:7}
+            WFLOW=${CIRCLE_WORKFLOW_ID:0:7}
+            yq eval -i '.managedNodeGroups[0].labels.workflow = strenv(WFLOW)' \
+            ./deployment/cf-templates/eks-node.yml
+            yq eval -i '.managedNodeGroups[0].name = strenv(NAME)' \
+            ./deployment/cf-templates/eks-node.yml
+            cat ./deployment/cf-templates/eks-node.yml
       - run:
           name: "create nodegroup with eskctl"
           command: |
@@ -141,6 +144,7 @@ workflows:
           aws-secret-access-key: AWS_SECRET_ACCESS_KEY
           create-repo: true
           no-output-timeout: 20m
+          path: /deployment
           region: AWS_REGION
           repo: geohospital
           skip-when-tags-exist: false

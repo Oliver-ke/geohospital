@@ -14,8 +14,8 @@ vpc:
       public2:
         id: "subnet-05aa97b72c3868ed6"
 managedNodeGroups:
-  - name: node-8873
-    labels: {role: workers, workflow: mee}
+  - name: money
+    labels: {role: workers, workflow: ell}
     instanceType: t2.medium
     desiredCapacity: 1
     volumeSize: 80
