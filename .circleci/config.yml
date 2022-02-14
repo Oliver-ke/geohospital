@@ -144,7 +144,6 @@ workflows:
           aws-secret-access-key: AWS_SECRET_ACCESS_KEY
           create-repo: true
           no-output-timeout: 20m
-          path: ./deployment
           region: AWS_REGION
           repo: geohospital
           skip-when-tags-exist: false
