@@ -39,3 +39,5 @@ yq -i '.managedNodeGroups[0].labels.app = "mee"' eks-node.yml
 
 changes the name
 yq -i '.managedNodeGroups[0].name = "node-8873"' eks-node.yml
+
+681986958382.dkr.ecr.us-east-1.amazonaws.com/geohospital

@@ -16,9 +16,9 @@ spec:
     spec:
       nodeSelector:
         kubernetes.io/os: linux
-        workflow: mee
+        workflow: nodename
       containers:
-      - name: backend
-        image: 681986958382.dkr.ecr.us-east-1.amazonaws.com/geohospital
-        ports:
-        - containerPort: 5000
+        - name: backend
+          image: 681986958382.dkr.ecr.us-east-1.amazonaws.com/geohospital
+          ports:
+            - containerPort: 5000
