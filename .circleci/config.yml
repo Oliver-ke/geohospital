@@ -87,7 +87,7 @@ jobs:
       - checkout
       - install-yd
       - run:
-          name: "install eskctl"
+          name: "install eksctl"
           command: |
             curl --silent --location \
             "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | \
@@ -98,15 +98,15 @@ jobs:
           command: |
             NAME=node-${CIRCLE_WORKFLOW_ID:0:7}
             WFLOW=${CIRCLE_WORKFLOW_ID:0:7}
-            yq eval -i '.managedNodeGroups[0].labels.workflow = strenv(WFLOW)' \
+            WFLOW=$WFLOW yq eval -i '.managedNodeGroups[0].labels.workflow = strenv(WFLOW)' \
             ./deployment/cf-templates/eks-node.yml
-            yq eval -i '.managedNodeGroups[0].name = strenv(NAME)' \
+            NAME=$NAME yq eval -i '.managedNodeGroups[0].name = strenv(NAME)' \
             ./deployment/cf-templates/eks-node.yml
             cat ./deployment/cf-templates/eks-node.yml
       - run:
           name: "create nodegroup with eskctl"
           command: |
-            eskctl create nodegroup -f deployment/cf-templates/eks-node.yml
+            eksctl create nodegroup -f deployment/cf-templates/eks-node.yml
         
       
   ## update deployment.yml with node-selector
@@ -144,7 +144,7 @@ workflows:
           aws-secret-access-key: AWS_SECRET_ACCESS_KEY
           create-repo: true
           no-output-timeout: 20m
-          path: /deployment
+          path: ./deployment
           region: AWS_REGION
           repo: geohospital
           skip-when-tags-exist: false
