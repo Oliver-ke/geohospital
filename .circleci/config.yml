@@ -124,15 +124,18 @@ jobs:
           command: |
             WFLOW=${CIRCLE_WORKFLOW_ID:0:7}
             IMAGE=681986958382.dkr.ecr.us-east-1.amazonaws.com/geohospital:${WFLOW}
+            NAME=deployment-${WFLOW}
             WFLOW=$WFLOW yq eval -i '.spec.template.spec.nodeSelector.workflow = strenv(WFLOW)' \
             ./deployment/deployment.yml
             IMAGE=$IMAGE yq eval -i '.spec.template.spec.containers[0].image = strenv(IMAGE)' \
+            ./deployment/deployment.yml
+            NAME=$NAME yq eval -i '.metadata.name = strenv(NAME)' \
             ./deployment/deployment.yml
             cat ./deployment/deployment.yml  
       - kubernetes/create-or-update-resource:
           get-rollout-status: true
           resource-file-path: ./deployment/deployment.yml
-          resource-name: deployment-${CIRCLE_WORKFLOW_ID:0:7}
+          resource-name: ${NAME}
       - run:
           name: Test cluster
           command: |
