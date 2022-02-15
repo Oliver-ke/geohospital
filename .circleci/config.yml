@@ -120,26 +120,44 @@ jobs:
           cluster-name: geohospital
       - install-yd
       - run:
-          name: update deployment to select new node
+          name: create deployment & service to select new node
           command: |
             WFLOW=${CIRCLE_WORKFLOW_ID:0:7}
             IMAGE=681986958382.dkr.ecr.us-east-1.amazonaws.com/geohospital:${WFLOW}
-            NAME=deployment-${WFLOW}
+            DP_NAME=deployment-${WFLOW}
+            APP=geohospital-${WFLOW}
+            SVR_NAME=service-${WFLOW}
             WFLOW=$WFLOW yq eval -i '.spec.template.spec.nodeSelector.workflow = strenv(WFLOW)' \
             ./deployment/deployment.yml
             IMAGE=$IMAGE yq eval -i '.spec.template.spec.containers[0].image = strenv(IMAGE)' \
             ./deployment/deployment.yml
-            NAME=$NAME yq eval -i '.metadata.name = strenv(NAME)' \
+            NAME=$DP_NAME yq eval -i '.metadata.name = strenv(NAME)' \
             ./deployment/deployment.yml
-            cat ./deployment/deployment.yml  
+            APP=$APP yq eval -i '.metadata.labels.app = strenv(APP)' \
+            ./deployment/deployment.yml
+            APP=$APP yq eval -i '.spec.selector.matchLabels.app = strenv(APP)' \
+            ./deployment/deployment.yml
+            APP=$APP yq eval -i '.spec.template.metadata.labels.app = strenv(APP)' \
+            ./deployment/deployment.yml
+            SVR=$SVR_NAME yq eval -i '.metadata.name = strenv(SVR)' \
+            ./deployment/loadbalancer.yml
+            APP=$APP yq eval -i '.spec.selector.app = strenv(APP)' \
+            ./deployment/loadbalancer.yml
+            cat ./deployment/deployment.yml
+            cat ./deployment/loadbalancer.yml  
       - kubernetes/create-or-update-resource:
           get-rollout-status: true
           resource-file-path: ./deployment/deployment.yml
-          resource-name: deployment-${CIRCLE_WORKFLOW_ID:0:7}
+          resource-name: deployment/deployment-${CIRCLE_WORKFLOW_ID:0:7}
+      - kubernetes/create-or-update-resource:
+          get-rollout-status: true
+          resource-file-path: ./deployment/loadbalancer.yml
+          resource-name: service/service-${CIRCLE_WORKFLOW_ID:0:7}
       - run:
-          name: Test cluster
+          name: show resource
           command: |
             kubectl get deployments
+            kubectl get services
           
 workflows:
   default:
@@ -150,7 +168,9 @@ workflows:
           requires: [build-frontend]
       - scan-backend:
           requires: [build-backend]
-      - create-nodegroup
+      - create-nodegroup:
+          requires: 
+            - scan-backend
       - aws-ecr/build-and-push-image:
           account-url: AWS_ECR_ACCOUNT_URL
           aws-access-key-id: AWS_ACCESS_KEY_ID
