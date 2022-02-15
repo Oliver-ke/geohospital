@@ -53,3 +53,6 @@ circleci local execute --job JOB_NAME
           name: create deployment
           command: |
             kubectl apply -f ./deployment/deployment.yml 
+
+
+            kubectl get service/service-7cebdca | awk {'print $4'} | grep ".com"

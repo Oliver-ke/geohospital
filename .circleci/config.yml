@@ -13,6 +13,14 @@ commands:
           command: |
             sudo wget https://github.com/mikefarah/yq/releases/download/v4.19.1/yq_linux_amd64 -O /usr/bin/yq &&\
             sudo chmod +x /usr/bin/yq
+    destroy-environment:
+      description: Destroy created resource on failure.
+      steps:
+        - run:
+            name: Destroy created nodegroup
+            when: on_fail
+            command: |
+              eksctl delete nodegroup node-${CIRCLE_WORKFLOW_ID:0:7}
 
 jobs:
   build-frontend:
@@ -107,6 +115,7 @@ jobs:
           name: "create nodegroup with eskctl"
           command: |
             eksctl create nodegroup -f deployment/cf-templates/eks-node.yml
+      - destroy-environment
         
       
   ## create a deployment on new node
@@ -150,7 +159,6 @@ jobs:
           resource-file-path: ./deployment/deployment.yml
           resource-name: deployment/deployment-${CIRCLE_WORKFLOW_ID:0:7}
       - kubernetes/create-or-update-resource:
-          get-rollout-status: true
           resource-file-path: ./deployment/loadbalancer.yml
           resource-name: service/service-${CIRCLE_WORKFLOW_ID:0:7}
       - run:
@@ -158,7 +166,130 @@ jobs:
           command: |
             kubectl get deployments
             kubectl get services
-          
+      - destroy-environment
+  
+  smoke-test: 
+    docker:
+      - image: 'cimg/python:3.10'
+    steps:
+      - checkout
+      - kubernetes/install
+      - aws-eks/update-kubeconfig-with-authenticator:
+          cluster-name: geohospital
+      - run:
+          name: test deployment url
+          command: |
+            kubectl get service/service-${WFLOW} | awk {'print $4'} | grep ".com" \
+            >> url.txt
+            URL=$(cat url.txt)
+            RES=$(curl $URL \
+            -X POST \
+            -H 'content-type: application/json' \
+            --data '{
+              "query": "{ continents { code name } }"
+            }')
+            if echo $RES | grep "GraphQLError"
+            then
+              return 0
+            else
+              return 1
+            fi
+      - persist_to_workspace:
+          root: ~/
+          paths:
+            - .
+  
+  deploy-frontend-to-s3:
+    docker:
+      - image: python:3.7-alpine3.11
+    steps:
+      - checkout
+      - attach_workspace:
+          at: ~/
+      - run:
+          name: Install project dep
+          command: |
+            apk update && \
+            apk add nodejs npm
+      - run:
+          name: Install aws cli
+          command: python -m pip install awscli
+      - run:
+          name: Add backend url
+          command: |
+            APP_URL=$(cat url.txt)
+            echo $APP_URL >> frontend/.env
+            cat frontend/.env
+      - run:
+          name: create s3 bucket
+          command: |
+            aws cloudformation deploy \
+              --template-file deployment/cf-templates/bucket.yml \
+              --tags project=geohospital-frontend \
+              --stack-name "geohospital-frontend-${CIRCLE_WORKFLOW_ID:0:7}" \
+              --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"
+      - run:
+          name: Deploy frontend objects
+          command: |
+            cd frontend
+            npm install
+            npm run build
+            tar -czvf artifact-"${CIRCLE_WORKFLOW_ID:0:7}".tar.gz dist
+            aws s3 cp dist s3://geohospital-${CIRCLE_WORKFLOW_ID:0:7} --recursive
+      - run:
+          name: Destroy created nodegroup
+          when: on_fail
+          command: |
+            aws s3 rb s3://geohospital-${CIRCLE_WORKFLOW_ID:0:7} --force
+            aws cloudformation delete-stack \
+            --stack-name "geohospital-frontend-${CIRCLE_WORKFLOW_ID:0:7}"
+
+  cloudfront-update:
+    docker:
+      - image: amazon/aws-cli
+    steps:
+      - checkout
+      - run:
+          name: Install tar utility dependencies
+          command: |
+            yum install -y tar gzip
+      - run:
+          name: Save old workflow
+          command: |
+            export OldWorkflowID=$(aws cloudformation \
+            list-exports --query "Exports[?Name==\`WorkflowID\`].Value" \
+            --no-paginate --output text)
+            echo $OldWorkflowID >> OldWorkflowID.txt
+      - run:
+          name: Update cloudfront distribution
+          command: |
+            aws cloudformation deploy \
+            --template-file deployment/cf-templates/cloudfront.yml \
+            --stack-name InitialStack \
+            --parameter-overrides WorkflowID="${CIRCLE_WORKFLOW_ID:0:7}" \
+            --tags project=geohospital
+            echo Current WorkflowId: "{CIRCLE_WORKFLOW_ID:0:7}"
+      - persist_to_workspace:
+          root: ~/
+          paths:
+            - .
+
+  clean-up:
+      docker:
+        - image: amazon/aws-cli
+      steps:
+        - checkout
+        - run:
+            name: Install tar utility dependencies
+            command: |
+              yum install -y tar gzip
+        - attach_workspace:
+            at: ~/
+        - run:
+            name: Delete stacks and files
+            command: |
+              cat OldWorkflowID.txt
+
 workflows:
   default:
     jobs:
@@ -186,3 +317,17 @@ workflows:
       - deploy-to-cluster:
           requires:
             - aws-ecr/build-and-push-image
+            - create-nodegroup
+      - smoke-test:
+          requires:
+            - deploy-to-cluster
+      - deploy-frontend-to-s3:
+          requires: 
+            - smoke-test
+      - cloudfront-update:
+          requires:
+            - deploy-frontend-to-s3
+      - clean-up:
+          requires:
+            - cloudfront-update
+
