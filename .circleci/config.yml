@@ -13,14 +13,14 @@ commands:
           command: |
             sudo wget https://github.com/mikefarah/yq/releases/download/v4.19.1/yq_linux_amd64 -O /usr/bin/yq &&\
             sudo chmod +x /usr/bin/yq
-    destroy-environment:
-      description: Destroy created resource on failure.
-      steps:
-        - run:
-            name: Destroy created nodegroup
-            when: on_fail
-            command: |
-              eksctl delete nodegroup node-${CIRCLE_WORKFLOW_ID:0:7}
+  destroy-environment:
+    description: Destroy created resource on failure.
+    steps:
+      - run:
+          name: Destroy created nodegroup
+          when: on_fail
+          command: |
+            eksctl delete nodegroup node-${CIRCLE_WORKFLOW_ID:0:7}
 
 jobs:
   build-frontend:
@@ -179,6 +179,7 @@ jobs:
       - run:
           name: test deployment url
           command: |
+            WFLOW=${CIRCLE_WORKFLOW_ID:0:7}
             kubectl get service/service-${WFLOW} | awk {'print $4'} | grep ".com" \
             >> url.txt
             URL=$(cat url.txt)
