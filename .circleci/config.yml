@@ -184,19 +184,19 @@ jobs:
             kubectl get service/service-${WFLOW} | awk {'print $4'} | grep ".com" \
             >> url.txt
             cat url.txt
-            URL=http://$(cat url.txt)
-            RES=$(curl $URL \
-            -X POST \
-            -H 'content-type: application/json' \
-            --data '{
-              "query": "{ continents { code name } }"
-            }')
-            if echo $RES | grep "GraphQLError"
-            then
-              return 0
-            else
-              return 1
-            fi
+            # URL=http://$(cat url.txt)
+            # RES=$(curl $URL \
+            # -X POST \
+            # -H 'content-type: application/json' \
+            # --data '{
+            #   "query": "{ continents { code name } }"
+            # }')
+            # if echo $RES | grep "GraphQLError"
+            # then
+            #   return 0
+            # else
+            #   return 1
+            # fi
       - persist_to_workspace:
           root: ~/
           paths:

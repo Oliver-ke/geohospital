@@ -1,6 +1,6 @@
 # cleans resources created during development
 
-WFLOW="8f4af24"
+WFLOW="498cbda"
 
 eksctl delete nodegroup node-${WFLOW} --cluster geohospital
 kubectl delete services service-${WFLOW}
