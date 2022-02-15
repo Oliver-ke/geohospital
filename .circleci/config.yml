@@ -180,13 +180,11 @@ jobs:
           name: test deployment url
           command: |
             WFLOW=${CIRCLE_WORKFLOW_ID:0:7}
-            sleep 10
+            sleep 25
             kubectl get service/service-${WFLOW} | awk {'print $4'} | grep ".com" \
             >> url.txt
             cat url.txt
-            sed -i 's/\*\*\*\*\*\*\*\*\*/us-east-1/' url.txt
-            URL=$(cat url.txt)
-            echo $URL
+            URL=http://$(cat url.txt)
             RES=$(curl $URL \
             -X POST \
             -H 'content-type: application/json' \
@@ -220,12 +218,6 @@ jobs:
           name: Install aws cli
           command: python -m pip install awscli
       - run:
-          name: Add backend url
-          command: |
-            APP_URL=$(cat url.txt)
-            echo $APP_URL >> frontend/.env
-            cat frontend/.env
-      - run:
           name: create s3 bucket
           command: |
             aws cloudformation deploy \
@@ -236,13 +228,14 @@ jobs:
       - run:
           name: Deploy frontend objects
           command: |
+            REACT_APP_URL=http://$(cat url.txt)
             cd frontend
             npm install
             npm run build
             tar -czvf artifact-"${CIRCLE_WORKFLOW_ID:0:7}".tar.gz dist
             aws s3 cp dist s3://geohospital-${CIRCLE_WORKFLOW_ID:0:7} --recursive
       - run:
-          name: Destroy created nodegroup
+          name: Destroy created resource
           when: on_fail
           command: |
             aws s3 rb s3://geohospital-${CIRCLE_WORKFLOW_ID:0:7} --force

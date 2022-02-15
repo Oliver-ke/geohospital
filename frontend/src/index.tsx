@@ -6,8 +6,9 @@ import App from './App';
 import './index.scss';
 
 // create a client also check localstorage for the givin user
+const uri = process.env.REACT_APP_URL || 'http://localhost:5000';
 const client = new ApolloClient({
-  uri: 'http://localhost:5000',
+  uri,
   request: (operation: { setContext: Function }) => {
     const x_user = localStorage.getItem("x_user");
     if (x_user) {
