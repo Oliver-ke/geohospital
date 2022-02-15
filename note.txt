@@ -56,3 +56,5 @@ circleci local execute --job JOB_NAME
 
 
             kubectl get service/service-7cebdca | awk {'print $4'} | grep ".com"
+
+00399948.*****.aws.amazon.com

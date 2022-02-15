@@ -180,9 +180,13 @@ jobs:
           name: test deployment url
           command: |
             WFLOW=${CIRCLE_WORKFLOW_ID:0:7}
+            sleep 10
             kubectl get service/service-${WFLOW} | awk {'print $4'} | grep ".com" \
             >> url.txt
+            cat url.txt
+            sed -i 's/\*\*\*\*\*\*\*\*\*/us-east-1/' url.txt
             URL=$(cat url.txt)
+            echo $URL
             RES=$(curl $URL \
             -X POST \
             -H 'content-type: application/json' \
