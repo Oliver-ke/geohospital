@@ -233,7 +233,7 @@ jobs:
             npm install
             npm run build
             tar -czvf artifact-"${CIRCLE_WORKFLOW_ID:0:7}".tar.gz build
-            aws s3 cp dist s3://geohospital-${CIRCLE_WORKFLOW_ID:0:7} --recursive
+            aws s3 cp build s3://geohospital-${CIRCLE_WORKFLOW_ID:0:7} --recursive
       - run:
           name: Destroy created resource
           when: on_fail
