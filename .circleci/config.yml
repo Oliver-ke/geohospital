@@ -13,6 +13,16 @@ commands:
           command: |
             sudo wget https://github.com/mikefarah/yq/releases/download/v4.19.1/yq_linux_amd64 -O /usr/bin/yq &&\
             sudo chmod +x /usr/bin/yq
+  install-eksctl:
+    description: install eskctl utility for nodegroup creation
+    steps:
+      - run:
+          name: "install eksctl"
+          command: |
+            curl --silent --location \
+            "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | \
+            tar xz -C /tmp 
+            sudo mv /tmp/eksctl /usr/local/bin
   destroy-environment:
     description: Destroy created resource on failure.
     steps:
@@ -56,7 +66,22 @@ jobs:
           paths: [backend/node_modules]
           key: backend-build
   
-  ## lint backend
+  lint-backend:
+    docker:
+      - image: cimg/node:14.17.3
+    steps:
+      - checkout
+      - restore_cache:
+          keys: [backend-build]
+      - run:
+          name: Back-end build
+          command: |
+             cd backend
+             npm install
+             npm run lint
+      - save_cache:
+          paths: [backend/node_modules]
+          key: backend-build
   
   test-frontend:
     docker:
@@ -87,20 +112,14 @@ jobs:
             npm audit fix --audit-level=critical --force
             npm audit --audit-level=critical
 
-  ## create node using eksctl set lable
+  ## create node using eksctl set labels
   create-nodegroup:
     docker:
       - image: 'cimg/python:3.10'
     steps:
       - checkout
       - install-yd
-      - run:
-          name: "install eksctl"
-          command: |
-            curl --silent --location \
-            "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | \
-            tar xz -C /tmp 
-            sudo mv /tmp/eksctl /usr/local/bin
+      - install-eksctl
       - run:
           name: "update config with variables"
           command: |
@@ -153,7 +172,17 @@ jobs:
             APP=$APP yq eval -i '.spec.selector.app = strenv(APP)' \
             ./deployment/loadbalancer.yml
             cat ./deployment/deployment.yml
-            cat ./deployment/loadbalancer.yml  
+            cat ./deployment/loadbalancer.yml
+      - run:
+          name: "add container environment vars"
+          command: |
+            GOOGLE_MAP=$REACT_APP_GOOGLE_MAP yq eval -i '.spec.template.spec.containers[0].env[0].value = strenv(GOOGLE_MAP)' \
+            ./deployment/deployment.yml
+            ID=$AWS_ACCESS_KEY_ID yq eval -i '.spec.template.spec.containers[0].env[1].value = strenv(ID)' \
+            ./deployment/deployment.yml  
+            KEY=$AWS_SECRET_ACCESS_KEY yq eval -i '.spec.template.spec.containers[0].env[2].value = strenv(KEY)' \
+            ./deployment/deployment.yml 
+            cat ./deployment/deployment.yml
       - kubernetes/create-or-update-resource:
           get-rollout-status: true
           resource-file-path: ./deployment/deployment.yml
@@ -274,21 +303,38 @@ jobs:
           paths:
             - .
 
-  clean-up:
-      docker:
-        - image: amazon/aws-cli
-      steps:
-        - checkout
-        - run:
-            name: Install tar utility dependencies
-            command: |
-              yum install -y tar gzip
-        - attach_workspace:
-            at: ~/
-        - run:
-            name: Delete stacks and files
-            command: |
-              cat OldWorkflowID.txt
+  remove-old-serv-depl:
+    docker:
+      - image: 'cimg/python:3.10'
+    steps:
+      - checkout
+      - attach_workspace:
+          at: ~/
+      - kubernetes/install-kubectl
+      - aws-eks/update-kubeconfig-with-authenticator:
+          cluster-name: geohospital
+      - kubernetes/delete-resource:
+          now: true
+          resource-names: deployment-$(cat OldWorkflowID.txt)
+          resource-types: deployments
+          wait: true
+      - kubernetes/delete-resource:
+          now: true
+          resource-names: service-$(cat OldWorkflowID.txt)
+          resource-types: services
+          wait: true
+
+  remove-old-nodes:
+    docker:
+      - image: 'cimg/python:3.10'
+    steps:
+      - checkout
+      - install-eksctl
+      - run: 
+          name: delete old nodegroup
+          command: |
+            WFLOW=$(cat OldWorkflowID.txt)
+            eksctl delete nodegroup node-${WFLOW} --cluster geohospital
 
 workflows:
   default:
@@ -327,7 +373,10 @@ workflows:
       - cloudfront-update:
           requires:
             - deploy-frontend-to-s3
-      - clean-up:
+      - remove-old-serv-depl:
+          requires:
+            - cloudfront-update
+      - remove-old-nodes:
           requires:
             - cloudfront-update
 

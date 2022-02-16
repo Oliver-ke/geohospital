@@ -22,3 +22,10 @@ spec:
           image: 681986958382.dkr.ecr.us-east-1.amazonaws.com/geohospital
           ports:
             - containerPort: 5000
+          env:
+            - name: GOOGLE_MAP
+              value: ""
+            - name: AWS_ACCESS_KEY_ID
+              value: ""
+            - name: AWS_SECRET_ACCESS_KEY
+              value: ""
