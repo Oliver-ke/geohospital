@@ -228,8 +228,10 @@ jobs:
       - run:
           name: Deploy frontend objects
           command: |
-            REACT_APP_URL=http://$(cat url.txt)
+            URL="REACT_APP_URL=http://$(cat url.txt)"
             cd frontend
+            echo $URL >> .env
+            echo $REACT_APP_GOOGLE_MAP >> .env
             npm install
             npm run build
             tar -czvf artifact-"${CIRCLE_WORKFLOW_ID:0:7}".tar.gz build
