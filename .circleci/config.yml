@@ -330,6 +330,8 @@ jobs:
     steps:
       - checkout
       - install-eksctl
+      - attach_workspace:
+          at: ~/
       - run: 
           name: delete old nodegroup
           command: |
@@ -343,6 +345,8 @@ workflows:
       - build-backend
       - test-frontend:
           requires: [build-frontend]
+      - lint-backend:
+          requires: [build-backend]
       - scan-backend:
           requires: [build-backend]
       - create-nodegroup:
