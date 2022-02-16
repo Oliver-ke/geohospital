@@ -209,7 +209,7 @@ jobs:
           name: test deployment url
           command: |
             WFLOW=${CIRCLE_WORKFLOW_ID:0:7}
-            sleep 25
+            sleep 5
             kubectl get service/service-${WFLOW} | awk {'print $4'} | grep ".com" \
             >> url.txt
             cat url.txt

@@ -1,60 +1,12 @@
-[Build Command]
- docker build . -t geohospital:latest -f deployment/Dockerfile
 
- Screenshots
- [linting]
- - failed Screenshots
- - success Screenshots
+[Cloudfront Domain]
+http://dxr3z22vwg3gn.cloudfront.net/
 
-[Deployment]
-- Circleci pipeline showing deployment
-- AWS console showing application instances
+nb: frontend would not work properly due to mixed content, since the backend is on http.
+backend url is a graphql playground you can interact with the app using the backend url
 
+[Github Url]
+https://github.com/Oliver-ke/geohospital
 
-[kubectl context]
-kubectl config get-context
-
-add aws to kubectl context
-aws eks update-kubeconfig \
-  --region us-east-1 \
-  --name geohospital
-
-
-Kube deployment
-aws cloudformation deploy \
-    --template-file kube-node.yml \
-    --stack-name geo-cluster \
-    --parameter-overrides ClusterName="geohospital"
-
-
-default
-sg-06f95283a261b28ef
-
-values to specify to the newly created node
---node-labels
---name
-
-changes the lable of the nodegroup
-yq -i '.managedNodeGroups[0].labels.app = "mee"' eks-node.yml
-
-changes the name
-yq -i '.managedNodeGroups[0].name = "node-8873"' eks-node.yml
-
-681986958382.dkr.ecr.us-east-1.amazonaws.com/geohospital
-
-circleci local execute --job JOB_NAME
-
-      - kubernetes/create-or-update-resource:
-          get-rollout-status: true
-          resource-file-path: tests/nginx-deployment/deployment.yaml
-          resource-name: deployment/nginx-deployment
-
-                - run:
-          name: create deployment
-          command: |
-            kubectl apply -f ./deployment/deployment.yml 
-
-
-            kubectl get service/service-7cebdca | awk {'print $4'} | grep ".com"
-
-00399948.*****.aws.amazon.com
+[Backend]
+backend url changes with every deployment, this would be added in the submission
